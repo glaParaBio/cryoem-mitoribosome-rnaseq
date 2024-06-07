@@ -1,0 +1,14 @@
+__pycache__
+*.swp
+*.tmp
+nohup.out
+.snakemake
+**/tmp/**
+**/latex/**/*.aux
+**/latex/**/*.log
+**/latex/**/*.out
+**/latex/**/*.toc
+**/latex/**/*.nav
+**/latex/**/*.snm
+**/latex/**/*.vrb
+**/latex/**/*.swo
