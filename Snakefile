@@ -38,8 +38,7 @@ rule all:
         # expand('vsearch/pid_{pid}/clusters_tgmito.tsv', pid=PID),
         expand('bowtie2/{ref}.align_summary.tsv', ref=REF),
         expand('bowtie2/{ref}.align_summary.pdf', ref=REF),
-        expand('cutadapt/fastqc/{library_id}_{r}_fastqc.html', library_id=ss.library_id, r=['1', '2']),
-        expand('bowtie2/tgmito/polyA/{library_id}.cnt', library_id=ss.library_id),
+        os.path.join(workflow.basedir, 'results/polyA.pdf'),
         # expand('bwa/tgmito/{library_id}.bam', library_id=ss.library_id),
         # expand('bwa/genomes/{library_id}.bam', library_id=ss.library_id),
         #expand('bwa/{library_id}.bam', library_id=ss.library_id),
@@ -142,45 +141,38 @@ rule plot_polya:
     input:
         cnt=expand('bowtie2/tgmito/polyA/{library_id}.cnt', library_id=ss.library_id),
         ss=config['ss'],
+        rrna=config['tgmito'],
     output:
-        pap1='bowtie2/tgmito/polyA/PAP1.pdf',
-        wc='bowtie2/tgmito/polyA/57-WC.pdf',
+        ridge=os.path.join(workflow.basedir, 'results/polyA.pdf'),
+        tsv='bowtie2/tgmito//polyA/polyA.tsv.gz',
     shell:
         r"""
 cat <<'EOF' > {rule}.$$.tmp.R
 library(data.table)
 library(ggplot2)
 library(Biostrings)
+library(ggridges)
 
-wtd.sd <- function(x, weights) {
-  # Get the mean
-  xm <- weighted.mean(x, weights, na.rm = TRUE)
-  # Squaring the weighted deviations and dividing by weighted N - 1
-  variance <- sum((weights * (x - xm)^2) / (sum(weights[!is.na(x)]) - 1), na.rm = TRUE)
-  # Standard deviation is sqrt(variance)
-  sd <- sqrt(variance)
-  # Return the SD
-  return(sd)
-}
-
-ss <- fread('/users/db291g/git_repos/glaParaBio/cryoem-mitoribosome-rnaseq/sample_sheet.tsv')
-fasta <- readDNAStringSet('/users/db291g/git_repos/glaParaBio/cryoem-mitoribosome-rnaseq/rRNA_sequences_231221.fa')
+ss <- fread('{input.ss}')
+fasta <- readDNAStringSet('{input.rrna}')
 fasta <- as.character(fasta)
 fasta <- data.table(reference_name= sub(' .*', '', names(fasta)), seq=fasta)
 fasta[, polyA := nchar(seq) - nchar(sub('A*$', '', seq))]
 
+ff <- strsplit('{input.cnt}', split=' ')[[1]]
+
 cnt <- list()
-for (x in list.files(path='bowtie2/tgmito/polyA', pattern='.*.cnt', full.names=TRUE)) {
+for (x in ff) {{
     fin <- fread(x)
     fin[, cpm := 1000000 * (count/sum(count))]
     cnt[[length(cnt) + 1]] <- fin
-}
+}}
 cnt <- rbindlist(cnt)
 cnt <- merge(cnt, ss[, list(library_id, type, line)], by='library_id')
 cnt <- merge(cnt, fasta[, list(reference_name, polyA)], by='reference_name')
 cnt[, polya_pct := 100 * (count / sum(count)), list(reference_name, library_id)]
 
-fwrite(cnt, 'polyA.tsv', sep='\t')
+fwrite(cnt, '{output.tsv}', sep='\t')
 
 keep <- cnt[, list(size=sum(cpm)/length(unique(library_id))), reference_name][size > 2000]
 dat <- merge(cnt, keep, by='reference_name')
@@ -205,80 +197,7 @@ gg <- ggplot(data=dat[library_id %in% c('57-WC-noATc', '57-WC-48ATc', 'L7-12-01'
     theme_light() +
     theme(strip.text=element_text(colour='grey30')) +
     theme(legend.position="none")
-ggsave('polyA.pdf', width=40, height=30, units='cm')
-
-
-###
-
-dat <- cnt[, list(
-        avg=weighted.mean(polya_length, count), 
-        std=wtd.sd(polya_length, count), 
-        med=as.numeric(median(rep(polya_length, times=count))), 
-        mode=.SD[which.max(count)]$polya_length, 
-        cpm=sum(cpm)), 
-    list(reference_name, library_id, polyA, type, line)]
-
-keep <- dat[, list(size=sum(cpm)), reference_name][order(size)][size > 10000]
-dat <- merge(dat, keep, by='reference_name')
-dat[, title := sprintf('%s | size=%.1f', gsub('toxo_|rRNA_', '', reference_name), size)]
-xord <- unique(dat[order(-polyA, title), list(polyA, title)])$title
-dat[, title := factor(title, xord)]
-
-dat[, type := factor(type, c('control', 'PolyA-KO', 'Untreated', 'pull_down'))]
-dat[, line := factor(line, c("SDHB", "57-WC", "PAP1", 'L7'))]
-xord <- unique(dat[order(line, type, library_id)]$library_id)
-dat[, library_id := factor(library_id, rev(xord))]
-
-gg <- ggplot(data=dat, aes(x=library_id, y=avg, colour=type)) +
-    geom_hline(data=unique(dat[, list(polyA, title)]), aes(yintercept=polyA), colour='blue', linetype='dashed') +
-    geom_point() +
-    geom_point(aes(y=mode), pch=4, cex=2) +
-    geom_segment(aes(y=ifelse(avg-std < 0, 0, avg-std), yend=avg+std, xend=library_id)) +
-    facet_wrap(~title, scales='free_x', ncol=6) +
-    coord_flip() +
-    ylim(0, NA) +
-    theme_light() +
-    ylab('Mean polyA length +/- SD') +
-    xlab('') +
-    theme(strip.text=element_text(colour='grey30'))
-ggsave('polyA_mean_sd_mode.pdf', width=40, height=40, units='cm')
-    
-
-dat <- cnt[polya_length == 0, ]
-dat[, title := sprintf('%s', gsub('toxo_|rRNA_', '', reference_name))]
-xord <- unique(dat[order(-polyA, title), list(polyA, title)])$title
-dat[, title := factor(title, xord)]
-
-dat[, type := factor(type, c('control', 'PolyA-KO', 'Untreated', 'pull_down'))]
-dat[, line := factor(line, c("SDHB", "57-WC", "PAP1", 'L7'))]
-xord <- unique(dat[order(line, type, library_id)]$library_id)
-dat[, library_id := factor(library_id, rev(xord))]
-
-gg <- ggplot(data=dat, aes(x=library_id, y=cpm, fill=type)) +
-    geom_col() +
-    facet_wrap(~title, scales='free_x', ncol=6) +
-    coord_flip() +
-    ylim(0, NA) +
-    theme_light() +
-    ylab('Mean polyA length +/- SD') +
-    theme(axis.text.x=element_blank(), strip.text=element_text(colour='grey30'))
-ggsave('tmp2.pdf', width=40, height=40, units='cm')
-
-############
-
-dat <- cnt[library_id %in% c('57-WC-48ATc', '57-WC-noATc')]
-dat <- cnt[library_id %in% c('PAP1-48ATc-digi', 'PAP1-noATc-digi')]
-keep <- dat[, list(size=sum(cpm)), reference_name][order(size)][size > 1000]
-dat <- merge(dat, keep, by='reference_name')
-dat[, title := sprintf('%s | A=%s | size=%.1f', gsub('toxo_|rRNA_', '', reference_name), polyA, size)]
-dat[order(library_id, reference_name, polya_length), pct_polyA := 100 * cumsum(count)/sum(count), by=list(library_id, reference_name)]
-xord <- unique(dat[order(-polyA, title), list(polyA, title)])$title
-dat[, title := factor(title, xord)]
-
-gg <- ggplot(data=dat, aes(y=pct_polyA, x=polya_length, colour=library_id)) +
-    geom_line() +
-    facet_wrap(~title, scales='free_x')
-ggsave('PAP1.pdf', width=50, height=50, units='cm')
+ggsave('{output.ridge}', width=40, height=30, units='cm')
 EOF
 Rscript {rule}.$$.tmp.R
 rm {rule}.$$.tmp.R
