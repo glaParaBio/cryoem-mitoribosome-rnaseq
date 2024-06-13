@@ -142,6 +142,7 @@ rule plot_polya:
         cnt=expand('bowtie2/tgmito/polyA/{library_id}.cnt', library_id=ss.library_id),
         ss=config['ss'],
         rrna=config['tgmito'],
+        chains=config['chains'],
     output:
         ridge=os.path.join(workflow.basedir, 'results/polyA.pdf'),
         emmeans=os.path.join(workflow.basedir, 'results/emmeans.txt'),
@@ -154,10 +155,14 @@ library(ggplot2)
 library(Biostrings)
 library(emmeans)
 
+chains <- fread('{input.chains}')
 ss <- fread('{input.ss}')
 fasta <- readDNAStringSet('{input.rrna}')
 fasta <- as.character(fasta)
 fasta <- data.table(reference_name= sub(' .*', '', names(fasta)), seq=fasta)
+fasta[, chain_id := sub('.*_', '', reference_name)]
+stopifnot(identical(sort(chains$chain_id), sort(fasta$chain_id)))
+fasta <- merge(fasta, chains[, list(chain_id, Nomenclature)], by='chain_id')
 fasta[, polyA := nchar(seq) - nchar(sub('A*$', '', seq))]
 
 ff <- strsplit('{input.cnt}', split=' ')[[1]]
@@ -170,16 +175,16 @@ for (x in ff) {{
 }}
 cnt <- rbindlist(cnt)
 cnt <- merge(cnt, ss[, list(library_id, type, line)], by='library_id')
-cnt <- merge(cnt, fasta[, list(reference_name, polyA)], by='reference_name')
+cnt <- merge(cnt, fasta[, list(reference_name, polyA, Nomenclature)], by='reference_name')
 cnt[, polya_pct := 100 * (count / sum(count)), list(reference_name, library_id)]
 
 fwrite(cnt, '{output.tsv}', sep='\t')
 
 keep <- cnt[, list(size=sum(cpm)/length(unique(library_id))), reference_name][size > 2000]
-dat <- merge(cnt, keep, by='reference_name')
-dat <- dat[order(library_id, reference_name, polya_length)][, list(polya_length, cumpct=cumsum(polya_pct), polya_pct, size, polyA, type, line), by=list(library_id, reference_name)]
+dat <- merge(cnt[library_id %in% c('57-WC-noATc', '57-WC-48ATc')], keep, by='reference_name')
+dat <- dat[order(library_id, reference_name, polya_length)][, list(polya_length, cumpct=cumsum(polya_pct), polya_pct, size, polyA, type, line), by=list(library_id, reference_name, Nomenclature)]
 
-dat[, title := sprintf('%s | size=%.1f', gsub('toxo_|rRNA_', '', reference_name), size)]
+dat[, title := sprintf('%s | size=%.1f', gsub('toxo_|rRNA_', '', Nomenclature), size)]
 xord <- unique(dat[order(-polyA, title), list(polyA, title)])$title
 dat[, title := factor(title, xord)]
 dat[, type := factor(type, c('control', 'PolyA-KO', 'Untreated', 'pull_down'))]
@@ -187,24 +192,21 @@ dat[, line := factor(line, c("SDHB", "57-WC", "PAP1", 'L7'))]
 xord <- unique(dat[order(line, type, library_id)]$library_id)
 dat[, library_id := factor(library_id, rev(xord))]
 
-gg <- ggplot(data=dat[library_id %in% c('57-WC-noATc', '57-WC-48ATc') & cumpct < 99], aes(x=polya_length, y=polya_pct, colour=library_id, group=library_id)) +
+gg <- ggplot(data=dat[cumpct < 99], aes(x=polya_length, y=polya_pct, colour=library_id, group=library_id)) +
     geom_line() +
     geom_point(cex=0.7) +
     scale_colour_brewer(palette='Dark2') +
-    # geom_density_ridges(aes(height=polya_pct), stat = "identity", scale = 1, fill='grey80') +
     geom_vline(data=unique(dat[, list(polyA, title)]), aes(xintercept=polyA), colour='grey30', linetype='dashed') +
-    # scale_size(range=c(0, 6)) +
     facet_wrap(~title, ncol=6, scale='free_y') +
     # scale_y_discrete(expand = c(0, 0)) +
     xlab('PolyA length') +
     ylab('% reads') +
     theme_light() +
     theme(strip.text=element_text(colour='grey30'))
-    # theme(legend.position="none")
 ggsave('{output.ridge}', width=40, height=30, units='cm')
 
-xdat <- dat[library_id %in% c('57-WC-noATc', '57-WC-48ATc'), list(avg=weighted.mean(polya_length, polya_pct)), list(reference_name, library_id)]
-fit <- lm(avg ~ reference_name + library_id, data=xdat)
+xdat <- dat[, list(avg=weighted.mean(polya_length, polya_pct)), list(Nomenclature, library_id)]
+fit <- lm(avg ~ Nomenclature + library_id, data=xdat)
 sink('{output.emmeans}')
 (emm <- emmeans(fit, c('library_id')))
 (pairs(emm))

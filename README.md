@@ -21,6 +21,7 @@ snakemake -j 10 -p -n \
     --directory /users/db291g/sharedscratch/projects/cryoem-mitoribosome-rnaseq \
     --config ss=$PWD/sample_sheet.tsv \
         tgmito=$PWD/rRNA_sequences_231221.fa \
+        chains=$PWD/chains.tsv \
     --latency-wait 60 \
     --default-resources "mem='1G'" "cpus_per_task='1'" \
     --cluster 'sbatch --cpus-per-task={resources.cpus_per_task} --mem={resources.mem} --parsable -o slurm/{rule}.{jobid}.out -e slurm/{rule}.{jobid}.err -A none' \
