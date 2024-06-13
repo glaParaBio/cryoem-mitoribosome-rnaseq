@@ -8,5 +8,6 @@ vsearch
 bowtie2 =2.5.2
 pysam =0.22.1
 bioconductor-biostrings =2.70.1
-r-ggridges =0.5.6
+r-emmeans =1.10.2
+# r-ggridges =0.5.6
 ipython
