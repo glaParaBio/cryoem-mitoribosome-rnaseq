@@ -1,10 +1,10 @@
  library_id  emmean    SE df lower.CL upper.CL
- 57-WC-noATc   3.95 0.135 30     3.67     4.22
  57-WC-48ATc   3.27 0.135 30     3.00     3.55
+ 57-WC-noATc   3.95 0.135 30     3.67     4.22
 
 Results are averaged over the levels of: Nomenclature 
 Confidence level used: 0.95 
  contrast                      estimate    SE df t.ratio p.value
- (57-WC-noATc) - (57-WC-48ATc)    0.672 0.191 30   3.520  0.0014
+ (57-WC-48ATc) - (57-WC-noATc)   -0.672 0.191 30  -3.520  0.0014
 
 Results are averaged over the levels of: Nomenclature 

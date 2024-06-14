@@ -39,6 +39,7 @@ rule all:
         expand('bowtie2/{ref}.align_summary.tsv', ref=REF),
         expand('bowtie2/{ref}.align_summary.pdf', ref=REF),
         os.path.join(workflow.basedir, 'results/polyA.pdf'),
+        os.path.join(workflow.basedir, 'results/polyA_ridges.pdf'),
         # expand('bwa/tgmito/{library_id}.bam', library_id=ss.library_id),
         # expand('bwa/genomes/{library_id}.bam', library_id=ss.library_id),
         #expand('bwa/{library_id}.bam', library_id=ss.library_id),
@@ -144,7 +145,8 @@ rule plot_polya:
         rrna=config['tgmito'],
         chains=config['chains'],
     output:
-        ridge=os.path.join(workflow.basedir, 'results/polyA.pdf'),
+        line=os.path.join(workflow.basedir, 'results/polyA.pdf'),
+        ridge=os.path.join(workflow.basedir, 'results/polyA_ridges.pdf'),
         emmeans=os.path.join(workflow.basedir, 'results/emmeans.txt'),
         tsv='bowtie2/tgmito/polyA/polyA.tsv.gz',
     shell:
@@ -154,6 +156,7 @@ library(data.table)
 library(ggplot2)
 library(Biostrings)
 library(emmeans)
+library(ggridges)
 
 chains <- fread('{input.chains}')
 ss <- fread('{input.ss}')
@@ -184,8 +187,21 @@ keep <- cnt[, list(size=sum(cpm)/length(unique(library_id))), reference_name][si
 dat <- merge(cnt[library_id %in% c('57-WC-noATc', '57-WC-48ATc')], keep, by='reference_name')
 dat <- dat[order(library_id, reference_name, polya_length)][, list(polya_length, cumpct=cumsum(polya_pct), polya_pct, size, polyA, type, line), by=list(library_id, reference_name, Nomenclature)]
 
-dat[, title := sprintf('%s | size=%.1f', gsub('toxo_|rRNA_', '', Nomenclature), size)]
-xord <- unique(dat[order(-polyA, title), list(polyA, title)])$title
+xdat <- dat[, list(avg=weighted.mean(polya_length, polya_pct)), list(Nomenclature, library_id)]
+fit <- lm(avg ~ Nomenclature + library_id, data=xdat)
+sink('{output.emmeans}')
+(emm <- emmeans(fit, c('library_id')))
+(pairs(emm))
+sink()
+
+cdat <- dcast(xdat, Nomenclature ~ library_id, value.var='avg')
+cdat[, diff := `57-WC-noATc` - `57-WC-48ATc`]
+dat <- merge(dat, cdat[, list(Nomenclature, diff)], 'Nomenclature')
+
+dat[, subunit := ifelse(grepl('LSU', Nomenclature), 'LSU', 
+    ifelse(grepl('SSU', Nomenclature), 'SSU', NA))]
+dat[, title := sprintf('%s | size=%.0f | diff=%.1f', gsub('toxo_|rRNA_', '', Nomenclature), size, diff)]
+xord <- unique(dat[order(-diff), list(polyA, title)])$title
 dat[, title := factor(title, xord)]
 dat[, type := factor(type, c('control', 'PolyA-KO', 'Untreated', 'pull_down'))]
 dat[, line := factor(line, c("SDHB", "57-WC", "PAP1", 'L7'))]
@@ -198,19 +214,24 @@ gg <- ggplot(data=dat[cumpct < 99], aes(x=polya_length, y=polya_pct, colour=libr
     scale_colour_brewer(palette='Dark2') +
     geom_vline(data=unique(dat[, list(polyA, title)]), aes(xintercept=polyA), colour='grey30', linetype='dashed') +
     facet_wrap(~title, ncol=6, scale='free_y') +
-    # scale_y_discrete(expand = c(0, 0)) +
     xlab('PolyA length') +
     ylab('% reads') +
     theme_light() +
     theme(strip.text=element_text(colour='grey30'))
-ggsave('{output.ridge}', width=40, height=30, units='cm')
+ggsave('{output.line}', width=40, height=30, units='cm')
 
-xdat <- dat[, list(avg=weighted.mean(polya_length, polya_pct)), list(Nomenclature, library_id)]
-fit <- lm(avg ~ Nomenclature + library_id, data=xdat)
-sink('{output.emmeans}')
-(emm <- emmeans(fit, c('library_id')))
-(pairs(emm))
-sink()
+gg <- ggplot(data=dat[cumpct < 99], aes(x=polya_length, y=library_id, colour=library_id)) +
+    geom_density_ridges(aes(height=polya_pct, group=library_id), stat = "identity", scale = 1, fill='grey80') +
+    geom_vline(data=unique(dat[, list(polyA, title)]), aes(xintercept=polyA), colour='grey30', linetype='dashed') +
+    scale_colour_brewer(palette='Dark2') +
+    facet_wrap(~title, ncol=6) +
+    scale_y_discrete(expand = c(0, 0)) +
+    xlab('PolyA length') +
+    ylab('% reads') +
+    theme_light() +
+    theme(strip.text=element_text(colour='grey30')) +
+    theme(legend.position="none")
+ggsave('{output.ridge}', width=40, height=30, units='cm')
 
 EOF
 Rscript {rule}.$$.tmp.R
