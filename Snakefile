@@ -31,22 +31,25 @@ wildcard_constraints:
 
 rule all:
     input:
-        # expand('vsearch/reads.{pid}.uc', pid=['0.90', '0.95', '0.98']),
-        # expand('bowtie2/genomes/unmapped/{library_id}.fa.gz', library_id=ss.library_id),
-        # expand('bowtie2/{library_id}.align_intersect.tsv', library_id=ss.library_id),
-        # expand('consensus/{mtrna}/{library_id}.cons.fa', mtrna=mtrna, library_id=ss.library_id),
-        # expand('vsearch/pid_{pid}/clusters_tgmito.tsv', pid=PID),
         expand('bowtie2/{ref}.align_summary.tsv', ref=REF),
         expand('bowtie2/{ref}.align_summary.pdf', ref=REF),
         os.path.join(workflow.basedir, 'results/polyA.pdf'),
         os.path.join(workflow.basedir, 'results/polyA_ridges.pdf'),
-        # expand('bwa/tgmito/{library_id}.bam', library_id=ss.library_id),
-        # expand('bwa/genomes/{library_id}.bam', library_id=ss.library_id),
-        #expand('bwa/{library_id}.bam', library_id=ss.library_id),
-        #expand('bwa/{library_id}.bam.bai', library_id=ss.library_id),
-        #expand('hisat2/{library_id}.bam', library_id=ss.library_id),
-        #expand('hisat2/{library_id}.bam.bai', library_id=ss.library_id),
-        # expand('mergepairs/{library_id}.fastq', library_id=ss.library_id, r=['1', '2']),
+
+rule extra:
+    input:
+        expand('vsearch/reads.{pid}.uc', pid=['0.90', '0.95', '0.98']),
+        expand('bowtie2/genomes/unmapped/{library_id}.fa.gz', library_id=ss.library_id),
+        expand('bowtie2/{library_id}.align_intersect.tsv', library_id=ss.library_id),
+        expand('consensus/{mtrna}/{library_id}.cons.fa', mtrna=mtrna, library_id=ss.library_id),
+        expand('vsearch/pid_{pid}/clusters_tgmito.tsv', pid=PID),
+        expand('bwa/tgmito/{library_id}.bam', library_id=ss.library_id),
+        expand('bwa/genomes/{library_id}.bam', library_id=ss.library_id),
+        expand('bwa/{library_id}.bam', library_id=ss.library_id),
+        expand('bwa/{library_id}.bam.bai', library_id=ss.library_id),
+        expand('hisat2/{library_id}.bam', library_id=ss.library_id),
+        expand('hisat2/{library_id}.bam.bai', library_id=ss.library_id),
+        expand('mergepairs/{library_id}.fastq', library_id=ss.library_id, r=['1', '2']),
 
 
 rule download_monkey:
