@@ -43,7 +43,7 @@ For details of the analysis see the [Snakefile](Snakefile).
 snakemake -j 10 -p \
     --dry-run \
     --rerun-trigger mtime \
-    --directory /users/db291g/sharedscratch/projects/cryoem-mitoribosome-rnaseq \
+    --directory output \
     --config ss=$PWD/sample_sheet.tsv \
         tgmito=$PWD/rRNA_sequences_231221.fa \
         chains=$PWD/chains.tsv \

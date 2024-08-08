@@ -418,7 +418,7 @@ smry <- rbindlist(smry)
 
 dat <- dcast(data=smry, ref + length ~ library_id, value.var='cpm')
 dat[, ref := gsub('.*_rRNA_', '', ref)]
-dat <- melt(data=dat[, list(ref, `L7-12-01`, `L7-12-02`, `SDHB-NC`)], id.vars=c('ref'), variable.name='library_id', value.name='cpm')
+dat <- melt(data=dat[, list(ref, `L7-12-01`, `L7-12-02`)], id.vars=c('ref'), variable.name='library_id', value.name='cpm')
 xord <- dat[, list(cpm=sum(cpm)), ref][order(cpm)]$ref
 dat[, ref := factor(ref, xord)]
 

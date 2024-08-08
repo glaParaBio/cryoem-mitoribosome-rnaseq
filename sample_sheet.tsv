@@ -1,5 +1,5 @@
 library_id	line	type	fastq_r1	fastq_r2
-L7-12-01	L7	pull_down	/mnt/data/project0015/db291g/data/20231124_shikha_mitoribosome/project_2948_proper/fastq/L7-12-01_S2_L001_R1_001.fastq.gz	/mnt/data/project0015/db291g/data/20231124_shikha_mitoribosome/project_2948_proper/fastq/L7-12-01_S2_L001_R2_001.fastq.gz
-L7-12-02	L7	pull_down	/mnt/data/project0015/db291g/data/20231124_shikha_mitoribosome/project_2948_proper/fastq/L7-12-02_S3_L001_R1_001.fastq.gz	/mnt/data/project0015/db291g/data/20231124_shikha_mitoribosome/project_2948_proper/fastq/L7-12-02_S3_L001_R2_001.fastq.gz
-57-WC-48ATc	57-WC	PolyA-KO	/mnt/autofs/data/userdata/project0015/db291g/data/20231124_shikha_mitoribosome/3061_VH00574_246_LilachSheiner_20240515/fastq/57-WC-48ATc_S11_L001_R1_001.fastq.gz	/mnt/autofs/data/userdata/project0015/db291g/data/20231124_shikha_mitoribosome/3061_VH00574_246_LilachSheiner_20240515/fastq/57-WC-48ATc_S11_L001_R2_001.fastq.gz
-57-WC-noATc	57-WC	Untreated	/mnt/autofs/data/userdata/project0015/db291g/data/20231124_shikha_mitoribosome/3061_VH00574_246_LilachSheiner_20240515/fastq/57-WC-noATc_S10_L001_R1_001.fastq.gz	/mnt/autofs/data/userdata/project0015/db291g/data/20231124_shikha_mitoribosome/3061_VH00574_246_LilachSheiner_20240515/fastq/57-WC-noATc_S10_L001_R2_001.fastq.gz
+L7-12-01	L7	pull_down	../test_data/fastq/L7-12-01_S2_L001_R1_001.fastq.gz	../test_data/fastq/L7-12-01_S2_L001_R2_001.fastq.gz
+L7-12-02	L7	pull_down	../test_data/fastq/L7-12-02_S3_L001_R1_001.fastq.gz	../test_data/fastq/L7-12-02_S3_L001_R2_001.fastq.gz
+57-WC-48ATc	57-WC	PolyA-KO	../test_data/fastq/57-WC-48ATc_S11_L001_R1_001.fastq.gz	../test_data/fastq/57-WC-48ATc_S11_L001_R2_001.fastq.gz
+57-WC-noATc	57-WC	Untreated	../test_data/fastq/57-WC-noATc_S10_L001_R1_001.fastq.gz	../test_data/fastq/57-WC-noATc_S10_L001_R2_001.fastq.gz
