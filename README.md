@@ -53,4 +53,6 @@ snakemake -j 10 -p \
     --cluster-cancel scancel
 ```
 
+The workflow on test data should complete in a a few minutes.
+
 To report bugs and questions, please submit an [issue](https://github.com/glaParaBio/cryoem-mitoribosome-rnaseq/issues).
