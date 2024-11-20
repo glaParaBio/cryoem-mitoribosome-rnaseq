@@ -149,6 +149,7 @@ rule plot_polya:
         chains=config['chains'],
     output:
         line=os.path.join(workflow.basedir, 'results/polyA.pdf'),
+        plot_data=os.path.join(workflow.basedir, 'results/polyA.plot_data.tsv'),
         ridge=os.path.join(workflow.basedir, 'results/polyA_ridges.pdf'),
         emmeans=os.path.join(workflow.basedir, 'results/emmeans.txt'),
         tsv='bowtie2/tgmito/polyA/polyA.tsv.gz',
@@ -211,11 +212,14 @@ dat[, line := factor(line, c("SDHB", "57-WC", "PAP1", 'L7'))]
 xord <- unique(dat[order(line, type, library_id)]$library_id)
 dat[, library_id := factor(library_id, rev(xord))]
 
-gg <- ggplot(data=dat[cumpct < 99], aes(x=polya_length, y=polya_pct, colour=library_id, group=library_id)) +
+plot_data <- dat[cumpct < 99]
+fwrite(plot_data, '{output.plot_data}', sep='\t')
+
+gg <- ggplot(data=plot_data, aes(x=polya_length, y=polya_pct, colour=library_id, group=library_id)) +
     geom_line() +
     geom_point(cex=0.7) +
     scale_colour_brewer(palette='Dark2') +
-    geom_vline(data=unique(dat[, list(polyA, title)]), aes(xintercept=polyA), colour='grey30', linetype='dashed') +
+    geom_vline(data=unique(plot_data[, list(polyA, title)]), aes(xintercept=polyA), colour='grey30', linetype='dashed') +
     facet_wrap(~title, ncol=6, scale='free_y') +
     xlab('PolyA length') +
     ylab('% reads') +
